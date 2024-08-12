@@ -27,7 +27,7 @@ def validated_choice(prompt, options):
         print(f"Invalid choice. Please choose from {', '.join(options)}.")
 
 def generate_function_signature(func_name, params, return_type=None, decorators=None):
-    param_str = ', '.join([f"{param['name']}: {param['type']} = {param['default']}" if 'default' in param else f"{param['name']}: {param['type']}" for param in params])
+    param_str = ', '.join([f"{param['name']}: {param['type']}" + (f" = {param['default']}" if 'default' in param else '') for param in params])
     return_type_str = f" -> {return_type}" if return_type else ""
     decorator_str = '\n'.join([f"@{decorator}" for decorator in decorators]) if decorators else ""
     return f"{decorator_str}\ndef {func_name}({param_str}){return_type_str}:"
@@ -73,14 +73,15 @@ def generate_custom_exception(exception_name, base_exception='Exception'):
     return f"class {exception_name}({base_exception}):\n    pass\n"
 
 def generate_factory_method(class_name, params):
-    param_str = ', '.join([f"{param['name']}: {param['type']}" if param['type'] else param['name'] for param in params])
+    param_str = ', '.join([f"{param['name']}: {param['type']}" for param in params])
     logic = f"return {class_name}({', '.join([param['name'] for param in params])})"
     return generate_function(f"create_{class_name.lower()}", params, logic, return_type=class_name)
 
 def generate_overloaded_method(func_name, signatures, logic_blocks):
     method_code = ""
     for i, (params, logic) in enumerate(zip(signatures, logic_blocks)):
-        condition = " and ".join([f"isinstance({param['name']}, {param['type']})" for param in params if param['type']])
+        conditions = [f"isinstance({param['name']}, {param['type']})" for param in params if param['type']]
+        condition = " and ".join(conditions) if conditions else "True"
         logic_code = generate_function_logic(logic)
         method_code += f"if {condition}:\n    {logic_code}\n"
         if i < len(signatures) - 1:
@@ -89,7 +90,7 @@ def generate_overloaded_method(func_name, signatures, logic_blocks):
 
 def generate_test_function(func_name, params):
     test_func_name = f"test_{func_name}"
-    test_logic = f"assert {func_name}({', '.join([param['test_value'] for param in params])}) == EXPECTED_OUTPUT"
+    test_logic = f"assert {func_name}({', '.join([param.get('test_value', 'None') for param in params])}) == EXPECTED_OUTPUT"
     return generate_function(test_func_name, [], test_logic)
 
 def format_code(code):
@@ -114,26 +115,30 @@ def main():
                'default': param.split(':')[2] if len(param.split(':')) > 2 else None} 
               for param in args.params] if args.params else []
 
-    if args.type == 'function':
-        logic = args.logic or safe_input("Enter the function logic: ")
-        generated_code = generate_function(args.name, params, logic, args.return_type, args.docstring)
+    try:
+        if args.type == 'function':
+            logic = args.logic or safe_input("Enter the function logic: ")
+            generated_code = generate_function(args.name, params, logic, args.return_type, args.docstring)
+        
+        elif args.type == 'class':
+            generated_code = generate_class(args.name, params)
+        
+        elif args.type == 'exception':
+            generated_code = generate_custom_exception(args.name)
+        
+        else:
+            print("Invalid type specified.")
+            return
+        
+        formatted_code = format_code(generated_code)
+        
+        output_file = args.output or f"{args.name}.py"
+        with open(output_file, "w") as file:
+            file.write(formatted_code)
+        print(f"Code saved to '{output_file}'")
     
-    elif args.type == 'class':
-        generated_code = generate_class(args.name, params)
-    
-    elif args.type == 'exception':
-        generated_code = generate_custom_exception(args.name)
-    
-    else:
-        print("Invalid type specified.")
-        return
-    
-    formatted_code = format_code(generated_code)
-    
-    output_file = args.output or f"{args.name}.py"
-    with open(output_file, "w") as file:
-        file.write(formatted_code)
-    print(f"Code saved to '{output_file}'")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
     main()
