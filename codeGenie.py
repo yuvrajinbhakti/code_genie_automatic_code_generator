@@ -1,8 +1,8 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Optional, Union, Any
 import argparse
 import autopep8
 
-def safe_input(prompt, expected_type=str, default=None):
+def safe_input(prompt: str, expected_type: type = str, default: Optional[Any] = None) -> Any:
     while True:
         user_input = input(prompt).strip()
         if not user_input and default is not None:
@@ -19,35 +19,35 @@ def safe_input(prompt, expected_type=str, default=None):
         except ValueError:
             print(f"Invalid input. Please enter a value of type {expected_type.__name__}.")
 
-def validated_choice(prompt, options):
+def validated_choice(prompt: str, options: List[str]) -> str:
     while True:
         choice = input(prompt).strip().lower()
         if choice in options:
             return choice
         print(f"Invalid choice. Please choose from {', '.join(options)}.")
 
-def generate_function_signature(func_name, params, return_type=None, decorators=None):
+def generate_function_signature(func_name: str, params: List[Dict[str, Union[str, int]]], return_type: Optional[str] = None, decorators: Optional[List[str]] = None) -> str:
     param_str = ', '.join([f"{param['name']}: {param['type']}" + (f" = {param['default']}" if 'default' in param else '') for param in params])
     return_type_str = f" -> {return_type}" if return_type else ""
     decorator_str = '\n'.join([f"@{decorator}" for decorator in decorators]) if decorators else ""
     return f"{decorator_str}\ndef {func_name}({param_str}){return_type_str}:"
 
-def generate_function_logic(logic):
+def generate_function_logic(logic: str) -> str:
     indented_logic = '\n    '.join(logic.split('\n'))
     return f"    {indented_logic}"
 
-def generate_docstring(params, return_type):
+def generate_docstring(params: List[Dict[str, str]], return_type: Optional[str]) -> str:
     param_str = '\n'.join([f"    :param {param['type']} {param['name']}: Description" for param in params])
     return_type_str = f"\n    :return: {return_type} -- Description" if return_type else ""
     return f'    """\n    {param_str}{return_type_str}\n    """\n'
 
-def generate_function(func_name, params, logic, return_type=None, docstring=None, decorators=None):
+def generate_function(func_name: str, params: List[Dict[str, Union[str, int]]], logic: str, return_type: Optional[str] = None, docstring: Optional[str] = None, decorators: Optional[List[str]] = None) -> str:
     signature = generate_function_signature(func_name, params, return_type, decorators)
     docstring = docstring or generate_docstring(params, return_type)
     function_code = f"{signature}\n{docstring}{generate_function_logic(logic)}"
     return function_code
 
-def generate_class(class_name, attributes=None, methods=None):
+def generate_class(class_name: str, attributes: Optional[List[Dict[str, Union[str, int]]]] = None, methods: Optional[List[str]] = None) -> str:
     attributes = attributes or []
     methods = methods or []
     
@@ -69,15 +69,15 @@ def generate_class(class_name, attributes=None, methods=None):
     
     return class_code
 
-def generate_custom_exception(exception_name, base_exception='Exception'):
+def generate_custom_exception(exception_name: str, base_exception: str = 'Exception') -> str:
     return f"class {exception_name}({base_exception}):\n    pass\n"
 
-def generate_factory_method(class_name, params):
+def generate_factory_method(class_name: str, params: List[Dict[str, str]]) -> str:
     param_str = ', '.join([f"{param['name']}: {param['type']}" for param in params])
     logic = f"return {class_name}({', '.join([param['name'] for param in params])})"
     return generate_function(f"create_{class_name.lower()}", params, logic, return_type=class_name)
 
-def generate_overloaded_method(func_name, signatures, logic_blocks):
+def generate_overloaded_method(func_name: str, signatures: List[List[Dict[str, str]]], logic_blocks: List[str]) -> str:
     method_code = ""
     for i, (params, logic) in enumerate(zip(signatures, logic_blocks)):
         conditions = [f"isinstance({param['name']}, {param['type']})" for param in params if param['type']]
@@ -88,15 +88,15 @@ def generate_overloaded_method(func_name, signatures, logic_blocks):
             method_code += "elif "
     return generate_function_signature(func_name, signatures[0]) + "\n" + method_code
 
-def generate_test_function(func_name, params):
+def generate_test_function(func_name: str, params: List[Dict[str, str]]) -> str:
     test_func_name = f"test_{func_name}"
     test_logic = f"assert {func_name}({', '.join([param.get('test_value', 'None') for param in params])}) == EXPECTED_OUTPUT"
     return generate_function(test_func_name, [], test_logic)
 
-def format_code(code):
+def format_code(code: str) -> str:
     return autopep8.fix_code(code)
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate Python code")
     parser.add_argument('-t', '--type', choices=['function', 'class', 'exception'], required=True, help="Type of code to generate")
     parser.add_argument('-n', '--name', required=True, help="Name of the function, class, or exception")
@@ -107,7 +107,7 @@ def parse_args():
     parser.add_argument('-o', '--output', help="Output file name")
     return parser.parse_args()
 
-def main():
+def main() -> None:
     args = parse_args()
     
     params = [{'name': param.split(':')[0], 
@@ -133,9 +133,12 @@ def main():
         formatted_code = format_code(generated_code)
         
         output_file = args.output or f"{args.name}.py"
-        with open(output_file, "w") as file:
-            file.write(formatted_code)
-        print(f"Code saved to '{output_file}'")
+        try:
+            with open(output_file, "w") as file:
+                file.write(formatted_code)
+            print(f"Code saved to '{output_file}'")
+        except IOError as e:
+            print(f"Failed to write to file: {e}")
     
     except Exception as e:
         print(f"An error occurred: {e}")
