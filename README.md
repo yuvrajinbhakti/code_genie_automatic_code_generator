@@ -2,13 +2,18 @@
 
 **CodeGenie** is a Python code generation tool that allows you to automatically create Python functions, classes, exceptions, and test cases. This tool is designed to simplify and automate code creation by generating well-structured and formatted Python code based on user input.
 
+
+
 ## Features
 
-- **Generate Functions**: Create Python functions with customizable parameters, return types, decorators, and logic.
-- **Generate Classes**: Define Python classes with attributes and methods, including factory methods.
-- **Generate Custom Exceptions**: Create custom exception classes for your applications.
-- **Generate Test Functions**: Automatically generate test functions for validating other functions.
-- **Code Formatting**: Automatically formats generated code to adhere to PEP 8 standards using `autopep8`.
+- **Function Generation**: Automatically create Python functions with proper signatures, logic, docstrings, and decorators.
+- **Class Generation**: Generate Python classes with attributes, methods, and constructors (`__init__`), fully customizable.
+- **Custom Exceptions**: Easily generate custom exception classes.
+- **Factory Methods & Overloaded Methods**: Create factory methods and overloaded methods based on provided signatures.
+- **Test Function Generator**: Generate basic test functions to validate your code.
+- **Code Formatting**: The generated code is automatically formatted using `autopep8` to ensure compliance with PEP 8 standards.
+
+
 
 ## Installation
 
