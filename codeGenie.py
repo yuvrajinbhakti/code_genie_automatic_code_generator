@@ -2,109 +2,68 @@ from typing import List, Dict, Optional, Union, Any
 import argparse
 import autopep8
 
-def safe_input(prompt: str, expected_type: type = str, default: Optional[Any] = None) -> Any:
-    while True:
-        user_input = input(prompt).strip()
-        if not user_input and default is not None:
-            return default
-        try:
-            if expected_type == int:
-                return int(user_input)
-            elif expected_type == float:
-                return float(user_input)
-            elif expected_type == list:
-                return [item.strip() for item in user_input.split(',')]
-            else:
-                return user_input
-        except ValueError:
-            print(f"Invalid input. Please enter a value of type {expected_type.__name__}.")
+# Existing functions ...
 
-def validated_choice(prompt: str, options: List[str]) -> str:
-    while True:
-        choice = input(prompt).strip().lower()
-        if choice in options:
-            return choice
-        print(f"Invalid choice. Please choose from {', '.join(options)}.")
+def generate_ml_model_template(model_type: str) -> str:
+    if model_type == 'linear_regression':
+        return '''
+from sklearn.linear_model import LinearRegression
 
-def generate_function_signature(func_name: str, params: List[Dict[str, Union[str, int]]], return_type: Optional[str] = None, decorators: Optional[List[str]] = None) -> str:
-    param_str = ', '.join([f"{param['name']}: {param['type']}" + (f" = {param['default']}" if 'default' in param else '') for param in params])
-    return_type_str = f" -> {return_type}" if return_type else ""
-    decorator_str = '\n'.join([f"@{decorator}" for decorator in decorators]) if decorators else ""
-    return f"{decorator_str}\ndef {func_name}({param_str}){return_type_str}:"
+def train_linear_regression(X_train, y_train):
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    return model
+        '''
+    elif model_type == 'neural_network':
+        return '''
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
 
-def generate_function_logic(logic: str) -> str:
-    indented_logic = '\n    '.join(logic.split('\n'))
-    return f"    {indented_logic}"
+def create_neural_network(input_shape):
+    model = Sequential()
+    model.add(Dense(64, input_shape=(input_shape,), activation='relu'))
+    model.add(Dense(1, activation='linear'))
+    model.compile(optimizer='adam', loss='mean_squared_error')
+    return model
+        '''
+    else:
+        return f"# Template for {model_type} is not available."
 
-def generate_docstring(params: List[Dict[str, str]], return_type: Optional[str]) -> str:
-    param_str = '\n'.join([f"    :param {param['type']} {param['name']}: Description" for param in params])
-    return_type_str = f"\n    :return: {return_type} -- Description" if return_type else ""
-    return f'    """\n    {param_str}{return_type_str}\n    """\n'
+def generate_nlp_pipeline_template(task: str) -> str:
+    if task == 'text_classification':
+        return '''
+from transformers import pipeline
 
-def generate_function(func_name: str, params: List[Dict[str, Union[str, int]]], logic: str, return_type: Optional[str] = None, docstring: Optional[str] = None, decorators: Optional[List[str]] = None) -> str:
-    signature = generate_function_signature(func_name, params, return_type, decorators)
-    docstring = docstring or generate_docstring(params, return_type)
-    function_code = f"{signature}\n{docstring}{generate_function_logic(logic)}"
-    return function_code
+def text_classification_pipeline():
+    classifier = pipeline('sentiment-analysis')
+    return classifier
+        '''
+    elif task == 'tokenization':
+        return '''
+import spacy
 
-def generate_class(class_name: str, attributes: Optional[List[Dict[str, Union[str, int]]]] = None, methods: Optional[List[str]] = None) -> str:
-    attributes = attributes or []
-    methods = methods or []
-    
-    class_signature = f"class {class_name}:"
-    
-    if attributes:
-        init_params = [{'name': attr['name'], 'type': attr.get('type', 'Any')} for attr in attributes]
-        init_logic = '\n'.join([f"self.{attr['name']} = {attr['name']}" for attr in attributes])
-        init_method = generate_function('__init__', init_params, init_logic)
-        methods.insert(0, init_method)
-    
-    if not methods:
-        return f"{class_signature}\n    pass"
-    
-    class_code = f"{class_signature}\n"
-    for method in methods:
-        indented_method = '\n    '.join(method.split('\n'))
-        class_code += f"    {indented_method}\n\n"
-    
-    return class_code
+def tokenization_pipeline(text: str):
+    nlp = spacy.load('en_core_web_sm')
+    doc = nlp(text)
+    tokens = [token.text for token in doc]
+    return tokens
+        '''
+    else:
+        return f"# Template for {task} is not available."
 
-def generate_custom_exception(exception_name: str, base_exception: str = 'Exception') -> str:
-    return f"class {exception_name}({base_exception}):\n    pass\n"
-
-def generate_factory_method(class_name: str, params: List[Dict[str, str]]) -> str:
-    param_str = ', '.join([f"{param['name']}: {param['type']}" for param in params])
-    logic = f"return {class_name}({', '.join([param['name'] for param in params])})"
-    return generate_function(f"create_{class_name.lower()}", params, logic, return_type=class_name)
-
-def generate_overloaded_method(func_name: str, signatures: List[List[Dict[str, str]]], logic_blocks: List[str]) -> str:
-    method_code = ""
-    for i, (params, logic) in enumerate(zip(signatures, logic_blocks)):
-        conditions = [f"isinstance({param['name']}, {param['type']})" for param in params if param['type']]
-        condition = " and ".join(conditions) if conditions else "True"
-        logic_code = generate_function_logic(logic)
-        method_code += f"if {condition}:\n    {logic_code}\n"
-        if i < len(signatures) - 1:
-            method_code += "elif "
-    return generate_function_signature(func_name, signatures[0]) + "\n" + method_code
-
-def generate_test_function(func_name: str, params: List[Dict[str, str]]) -> str:
-    test_func_name = f"test_{func_name}"
-    test_logic = f"assert {func_name}({', '.join([param.get('test_value', 'None') for param in params])}) == EXPECTED_OUTPUT"
-    return generate_function(test_func_name, [], test_logic)
-
-def format_code(code: str) -> str:
-    return autopep8.fix_code(code)
-
+# Extend argument parser to include ML/DL/NLP options
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate Python code")
-    parser.add_argument('-t', '--type', choices=['function', 'class', 'exception'], required=True, help="Type of code to generate")
+    parser.add_argument('-t', '--type', choices=['function', 'class', 'exception', 'ml', 'nlp'], required=True, help="Type of code to generate")
     parser.add_argument('-n', '--name', required=True, help="Name of the function, class, or exception")
     parser.add_argument('-p', '--params', nargs='*', help="Parameters (name:type[:default]) for the function or method")
     parser.add_argument('-r', '--return_type', help="Return type for the function")
     parser.add_argument('-l', '--logic', help="Logic of the function or method")
     parser.add_argument('-d', '--docstring', help="Docstring for the function or method")
     parser.add_argument('-o', '--output', help="Output file name")
+    parser.add_argument('--model_type', choices=['linear_regression', 'neural_network'], help="Type of ML model to generate")
+    parser.add_argument('--task', choices=['text_classification', 'tokenization'], help="NLP task to generate code for")
     return parser.parse_args()
 
 def main() -> None:
@@ -125,6 +84,12 @@ def main() -> None:
         
         elif args.type == 'exception':
             generated_code = generate_custom_exception(args.name)
+        
+        elif args.type == 'ml':
+            generated_code = generate_ml_model_template(args.model_type)
+        
+        elif args.type == 'nlp':
+            generated_code = generate_nlp_pipeline_template(args.task)
         
         else:
             print("Invalid type specified.")
